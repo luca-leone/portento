@@ -1,0 +1,51 @@
+{
+  "name": "@portento/cli",
+  "version": "2.0.0",
+  "description": "General-purpose CLI for React Native project build and deployment",
+  "main": "./dist/index.js",
+  "bin": {
+    "portento": "./dist/index.js"
+  },
+  "scripts": {
+    "build": "tsc && chmod +x ./dist/index.js",
+    "dev": "tsx index.ts",
+    "watch": "tsc --watch",
+    "clean": "rm -rf ./dist",
+    "prebuild": "npm run clean"
+  },
+  "files": [
+    "dist",
+    "README.md"
+  ],
+  "keywords": [
+    "cli",
+    "react-native",
+    "build",
+    "typescript",
+    "ios",
+    "android",
+    "mobile"
+  ],
+  "author": "stackshaper",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/luca-leone/portento"
+  },
+  "publishConfig": {
+    "access": "public"
+  },
+  "dependencies": {
+    "chalk": "^4.1.2",
+    "figlet": "^1.7.0",
+    "yaml": "^2.3.4",
+    "yargs": "^17.7.2"
+  },
+  "devDependencies": {
+    "@types/figlet": "^1.5.8",
+    "@types/node": "^20.11.0",
+    "@types/yargs": "^17.0.32",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  }
+}

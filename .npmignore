@@ -1,0 +1,14 @@
+# Source files
+src/
+*.ts
+!*.d.ts
+tsconfig.json
+
+# Development files
+node_modules/
+.DS_Store
+*.log
+.env*
+
+# Build tools
+tsx
