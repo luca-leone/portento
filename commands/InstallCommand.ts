@@ -80,10 +80,25 @@ export class InstallCommand {
   private static installIOS(deviceId?: string): void {
     const projectRoot: string = PathResolver.getProjectRoot();
 
-    let command: string = 'npx react-native run-ios --simulator';
+    let command: string = 'npx react-native run-ios';
 
     if (deviceId) {
-      command += ` --device="${deviceId}"`;
+      // Check if deviceId looks like a UDID (simulator) or device name
+      const isUDID: boolean =
+        /^[A-F0-9]{8}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{4}-[A-F0-9]{12}$/i.test(
+          deviceId,
+        );
+
+      if (isUDID) {
+        // Simulator UDID
+        command += ` --udid="${deviceId}"`;
+      } else {
+        // Physical device name or simulator name
+        command += ` --device="${deviceId}"`;
+      }
+    } else {
+      // No device specified, use default simulator
+      command += ' --simulator';
     }
 
     Logger.info('Installing iOS app...');
