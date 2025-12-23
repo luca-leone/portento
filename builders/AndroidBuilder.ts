@@ -377,6 +377,36 @@ class Builder {
     }
   }
 
+  public removeTemporaryFiles(): this {
+    Logger.step('Cleanup', 'Removing temporary build files');
+
+    try {
+      const androidDir: string = PathResolver.getAndroidDir();
+
+      // Remove build directories
+      const dirsToRemove: Array<string> = [
+        path.resolve(androidDir, 'build'),
+        path.resolve(androidDir, 'app', 'build'),
+        path.resolve(androidDir, '.gradle'),
+      ];
+
+      for (const dir of dirsToRemove) {
+        if (fs.existsSync(dir)) {
+          fs.rmSync(dir, {recursive: true, force: true});
+          Logger.info(`Removed: ${path.basename(dir)}`);
+        }
+      }
+
+      Logger.success('Temporary files removed');
+      return this;
+    } catch (error: unknown) {
+      const errorMessage: string =
+        error instanceof Error ? error.message : String(error);
+      Logger.warn(`Failed to remove temporary files: ${errorMessage}`);
+      return this;
+    }
+  }
+
   private restoreGradleProperties(): void {
     if (
       this.gradlePropertiesBackup &&

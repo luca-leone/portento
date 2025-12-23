@@ -271,6 +271,7 @@ class Builder {
         `-scheme ${projectName}`,
         '-sdk iphoneos',
         `-archivePath "${archivePath}"`,
+        '-allowProvisioningUpdates',
         `PROVISIONING_PROFILE="${credentials.PROVISIONING_PROFILE}"`,
         `CODE_SIGN_IDENTITY="${credentials.CODE_SIGN_IDENTITY}"`,
       ].join(' ');
@@ -317,6 +318,7 @@ class Builder {
         `-archivePath "${archivePath}"`,
         `-exportPath "${outDir}"`,
         `-exportOptionsPlist "${iosDir}/ExportOptions.plist"`,
+        '-allowProvisioningUpdates',
       ].join(' ');
 
       Logger.info('Running xcodebuild -exportArchive...');
@@ -349,6 +351,51 @@ class Builder {
       const errorMessage: string =
         error instanceof Error ? error.message : String(error);
       throw new BuildFailedError(`Failed to export IPA: ${errorMessage}`);
+    }
+  }
+
+  public removeTemporaryFiles(): this {
+    Logger.step('Cleanup', 'Removing temporary build files');
+
+    try {
+      const iosDir: string = PathResolver.getIOSDir();
+      const projectRoot: string = PathResolver.getProjectRoot();
+      const archivePath: string = IOSProjectResolver.getArchivePath();
+
+      // Remove temporary files and directories
+      const dirsToRemove: Array<string> = [
+        path.resolve(iosDir, 'build'),
+        path.resolve(iosDir, 'DerivedData'),
+        archivePath,
+        path.resolve(projectRoot, 'out'),
+      ];
+
+      const filesToRemove: Array<string> = [
+        path.resolve(iosDir, 'main.jsbundle'),
+        path.resolve(iosDir, 'main.jsbundle.map'),
+      ];
+
+      for (const dir of dirsToRemove) {
+        if (fs.existsSync(dir)) {
+          fs.rmSync(dir, {recursive: true, force: true});
+          Logger.info(`Removed: ${path.basename(dir)}`);
+        }
+      }
+
+      for (const file of filesToRemove) {
+        if (fs.existsSync(file)) {
+          fs.unlinkSync(file);
+          Logger.info(`Removed: ${path.basename(file)}`);
+        }
+      }
+
+      Logger.success('Temporary files removed');
+      return this;
+    } catch (error: unknown) {
+      const errorMessage: string =
+        error instanceof Error ? error.message : String(error);
+      Logger.warn(`Failed to remove temporary files: ${errorMessage}`);
+      return this;
     }
   }
 

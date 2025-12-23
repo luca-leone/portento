@@ -110,6 +110,7 @@ export class BuildCommand {
       .bundleJS()
       .compile()
       .exportArtifact()
+      .removeTemporaryFiles()
       .build();
   }
 
@@ -140,6 +141,7 @@ export class BuildCommand {
       .bundleJS()
       .archive()
       .exportIPA()
+      .removeTemporaryFiles()
       .build();
   }
 }
