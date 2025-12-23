@@ -1,5 +1,6 @@
 import {execSync} from 'child_process';
 import {PathResolver} from './PathResolver';
+import {IOSProjectResolver} from './IOSProjectResolver';
 import type {CertificateService} from './CertificateService';
 import {CommandExecutionError} from '../errors';
 import {Logger} from '../utils/Logger';
@@ -24,10 +25,10 @@ export class PushNotificationService {
       this.certificateService.copyPushNotificationCertificate('ios');
 
       // Execute Ruby script to update Xcode project
-      const projectPath: string =
-        PathResolver.getIOSDir() + '/InSchool.xcodeproj';
+      const projectName: string = IOSProjectResolver.getProjectName();
+      const projectPath: string = IOSProjectResolver.getXcodeprojPath();
       const googleServiceFile: string = PathResolver.getIOSGoogleServicesFile();
-      const targetName: string = 'InSchool';
+      const targetName: string = projectName;
 
       const rubyScript: string = PathResolver.getGoogleServicesIOSRubyScript();
 
@@ -71,9 +72,7 @@ export class PushNotificationService {
   public setIOSArchiveConfiguration(buildType: 'debug' | 'prod'): void {
     try {
       const configuration: string = buildType === 'prod' ? 'Release' : 'Debug';
-      const schemePath: string =
-        PathResolver.getIOSDir() +
-        '/InSchool.xcodeproj/xcshareddata/xcschemes/InSchool.xcscheme';
+      const schemePath: string = IOSProjectResolver.getSchemePath();
       const rubyScript: string = PathResolver.getXcodeArchiveConfigRubyScript();
 
       const command: string = `ruby "${rubyScript}" "${schemePath}" "${configuration}"`;

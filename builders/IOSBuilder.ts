@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {execSync} from 'child_process';
 import {PathResolver} from '../services/PathResolver';
+import {IOSProjectResolver} from '../services/IOSProjectResolver';
 import type {ManifestService} from '../services/ManifestService';
 import type {EnvironmentService} from '../services/EnvironmentService';
 import type {CertificateService} from '../services/CertificateService';
@@ -84,7 +85,7 @@ class Builder {
       // Clean build directories
       const buildDir: string = path.resolve(iosDir, 'build');
       const derivedDataDir: string = path.resolve(iosDir, 'DerivedData');
-      const xcarchive: string = path.resolve(iosDir, 'InSchool.xcarchive');
+      const xcarchive: string = IOSProjectResolver.getArchivePath();
       const mainBundle: string = path.resolve(iosDir, 'main.jsbundle');
       const mainBundleMap: string = path.resolve(iosDir, 'main.jsbundle.map');
       const outDir: string = path.resolve(PathResolver.getProjectRoot(), 'out');
@@ -179,9 +180,10 @@ class Builder {
     );
 
     try {
+      const projectName: string = IOSProjectResolver.getProjectName();
       const pbxprojFile: string = path.resolve(
         PathResolver.getIOSDir(),
-        'InSchool.xcodeproj',
+        `${projectName}.xcodeproj`,
         'project.pbxproj',
       );
 
@@ -254,6 +256,9 @@ class Builder {
 
     try {
       const iosDir: string = PathResolver.getIOSDir();
+      const projectName: string = IOSProjectResolver.getProjectName();
+      const xcworkspace: string = `${projectName}.xcworkspace`;
+      const archivePath: string = IOSProjectResolver.getArchivePath();
       const credentials: CredentialsData['IOS'] =
         this.certificateService.getIOSCredentials();
       const configuration: string =
@@ -261,11 +266,11 @@ class Builder {
 
       const command: string = [
         'xcodebuild archive',
-        '-workspace "InSchool.xcworkspace"',
+        `-workspace "${xcworkspace}"`,
         `-configuration ${configuration}`,
-        '-scheme InSchool',
+        `-scheme ${projectName}`,
         '-sdk iphoneos',
-        `-archivePath "${iosDir}/InSchool.xcarchive"`,
+        `-archivePath "${archivePath}"`,
         `PROVISIONING_PROFILE="${credentials.PROVISIONING_PROFILE}"`,
         `CODE_SIGN_IDENTITY="${credentials.CODE_SIGN_IDENTITY}"`,
       ].join(' ');
@@ -275,9 +280,8 @@ class Builder {
 
       // Register cleanup handler
       cleanupRegistry.register(() => {
-        const xcarchive: string = path.resolve(iosDir, 'InSchool.xcarchive');
-        if (fs.existsSync(xcarchive)) {
-          fs.rmSync(xcarchive, {recursive: true, force: true});
+        if (fs.existsSync(archivePath)) {
+          fs.rmSync(archivePath, {recursive: true, force: true});
           Logger.info('Removed iOS archive');
         }
       });
@@ -299,6 +303,8 @@ class Builder {
     try {
       const projectRoot: string = PathResolver.getProjectRoot();
       const iosDir: string = PathResolver.getIOSDir();
+      const archivePath: string = IOSProjectResolver.getArchivePath();
+      const ipaFileName: string = IOSProjectResolver.getIPAFileName();
       const outDir: string = path.resolve(projectRoot, 'out');
 
       // Ensure out directory exists
@@ -308,7 +314,7 @@ class Builder {
 
       const command: string = [
         'xcodebuild -exportArchive',
-        `-archivePath "${iosDir}/InSchool.xcarchive"`,
+        `-archivePath "${archivePath}"`,
         `-exportPath "${outDir}"`,
         `-exportOptionsPlist "${iosDir}/ExportOptions.plist"`,
       ].join(' ');
@@ -320,7 +326,7 @@ class Builder {
       PathResolver.ensureDistDir();
 
       const fileName: string = `v${this.version}_${this.buildNumber}_${this.environment}.ipa`;
-      const sourcePath: string = path.resolve(outDir, 'InSchool.ipa');
+      const sourcePath: string = path.resolve(outDir, ipaFileName);
       const distPath: string = path.resolve(
         PathResolver.getDistDir(),
         fileName,

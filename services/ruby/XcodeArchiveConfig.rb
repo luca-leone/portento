@@ -1,8 +1,8 @@
 # frozen_string_literal: true
 
 # XcodeArchiveConfig.rb
-# Visma CLI service for managing Xcode scheme archive build configurations
-# Part of the InSchool Mobile build automation pipeline
+# Generic CLI service for managing Xcode scheme archive build configurations
+# Works with any React Native iOS project
 
 VALID_CONFIGURATIONS = %w[Debug Release].freeze
 ARCHIVE_ACTION_PATTERN = /(<ArchiveAction[^>]*?buildConfiguration\s*=\s*['"])([^'"]+)(['"][^>]*?>)/m.freeze
@@ -49,9 +49,9 @@ def print_usage
       build_configuration  'Debug' or 'Release'
     
     Example:
-      ruby XcodeArchiveConfig.rb ios/InSchool.xcodeproj/xcshareddata/xcschemes/InSchool.xcscheme Release
+      ruby XcodeArchiveConfig.rb ios/YourApp.xcodeproj/xcshareddata/xcschemes/YourApp.xcscheme Release
     
-    Part of Visma CLI build automation for InSchool Mobile
+    Part of Portento CLI build automation
   USAGE
 end
 
@@ -127,11 +127,15 @@ end
 
 def get_entitlements_path(scheme_path)
   # Derive entitlements path from scheme path
-  # ios/InSchool.xcodeproj/xcshareddata/xcschemes/InSchool.xcscheme
-  # -> ios/InSchool/InSchool.entitlements
+  # ios/YourApp.xcodeproj/xcshareddata/xcschemes/YourApp.xcscheme
+  # -> ios/YourApp/YourApp.entitlements
+  
+  # Extract project name from scheme file name
+  scheme_name = File.basename(scheme_path, '.xcscheme')
   scheme_dir = File.dirname(scheme_path)
   ios_dir = File.dirname(File.dirname(File.dirname(scheme_dir)))
-  File.join(ios_dir, 'InSchool', 'InSchool.entitlements')
+  
+  File.join(ios_dir, scheme_name, "#{scheme_name}.entitlements")
 end
 
 def update_entitlements(entitlements_path, build_configuration)

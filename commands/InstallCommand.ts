@@ -67,7 +67,7 @@ export class InstallCommand {
 
   private static installAndroid(deviceId?: string): void {
     const projectRoot: string = PathResolver.getProjectRoot();
-    let command: string = 'npx react-native run-android';
+    let command: string = 'npx react-native run-android --simulator';
 
     if (deviceId) {
       command += ` --deviceId=${deviceId}`;
@@ -79,17 +79,8 @@ export class InstallCommand {
 
   private static installIOS(deviceId?: string): void {
     const projectRoot: string = PathResolver.getProjectRoot();
-    const iosDir: string = PathResolver.getIOSDir();
 
-    // Install pods first
-    Logger.info('Installing iOS dependencies (pod install)...');
-    try {
-      execSync('pod install', {stdio: 'inherit', cwd: iosDir});
-    } catch (error: unknown) {
-      Logger.warn('Pod install failed, continuing with installation...');
-    }
-
-    let command: string = 'npx react-native run-ios';
+    let command: string = 'npx react-native run-ios --simulator';
 
     if (deviceId) {
       command += ` --device="${deviceId}"`;

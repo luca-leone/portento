@@ -2,6 +2,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import {execSync} from 'child_process';
 import {PathResolver} from '../services/PathResolver';
+import {IOSProjectResolver} from '../services/IOSProjectResolver';
 import {CertificateService} from '../services/CertificateService';
 import {Logger} from '../utils/Logger';
 import {CommandExecutionError} from '../errors';
@@ -153,12 +154,22 @@ export class CleanCommand {
       const dirsToRemove: Array<string> = [
         path.resolve(iosDir, 'build'),
         path.resolve(iosDir, 'DerivedData'),
-        path.resolve(iosDir, 'InSchool.xcarchive'),
+
         path.resolve(iosDir, 'Pods'),
         path.resolve(iosDir, 'assets'),
         path.resolve(projectRoot, 'out'),
         path.resolve(projectRoot, 'vendors'),
       ];
+
+      // Add .xcarchive if it exists (dynamic project name)
+      try {
+        const xcarchivePath: string = IOSProjectResolver.getArchivePath();
+        if (fs.existsSync(xcarchivePath)) {
+          dirsToRemove.push(xcarchivePath);
+        }
+      } catch {
+        // If project resolver fails, skip .xcarchive cleanup
+      }
 
       const filesToRemove: Array<string> = [
         path.resolve(iosDir, 'main.jsbundle'),
