@@ -79,6 +79,14 @@ export class InstallCommand {
 
   private static installIOS(deviceId?: string): void {
     const projectRoot: string = PathResolver.getProjectRoot();
+    const iosDir: string = PathResolver.getIOSDir();
+
+    // Run pod install first to ensure dependencies are up to date
+    Logger.info('Running pod install...');
+    execSync('pod deintegrate && pod install --repo-update', {
+      stdio: 'inherit',
+      cwd: iosDir,
+    });
 
     let command: string = 'npx react-native run-ios';
 
