@@ -215,17 +215,6 @@ All commands provide detailed error messages. If a command fails:
 3. Ensure platform tools are installed (Xcode, Android SDK)
 4. Try running `portento clean --deep` and rebuilding
 
-## Development
-
-To work on this CLI:
-
-```bash
-git clone https://github.com/portento/cli.git
-cd cli
-npm install
-npm run build
-npm link
-```
 
 ## License
 
