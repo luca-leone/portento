@@ -1,6 +1,6 @@
 {
   "name": "@portento/cli",
-  "version": "2.0.4",
+  "version": "2.0.6",
   "description": "General-purpose CLI for React Native project build and deployment",
   "main": "./dist/index.js",
   "bin": {
