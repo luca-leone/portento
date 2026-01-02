@@ -67,7 +67,7 @@ export class InstallCommand {
 
   private static installAndroid(deviceId?: string): void {
     const projectRoot: string = PathResolver.getProjectRoot();
-    let command: string = 'npx react-native run-android --simulator';
+    let command: string = 'npx react-native run-android';
 
     if (deviceId) {
       command += ` --deviceId=${deviceId}`;
@@ -106,7 +106,7 @@ export class InstallCommand {
       }
     } else {
       // No device specified, use default simulator
-      command += ' --simulator';
+      command += '';
     }
 
     Logger.info('Installing iOS app...');
