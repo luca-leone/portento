@@ -322,7 +322,7 @@ class Builder {
       PathResolver.ensureDistDir();
 
       const bundleType: BundleType = this.getBundleType();
-      const fileName: string = `v${this.version}_${this.buildNumber}_${this.environment}.${bundleType}`;
+      const fileName: string = `v${this.version}_build_${this.buildNumber}_${this.environment.toUpperCase()}.${bundleType}`;
       const distPath: string = path.resolve(
         PathResolver.getDistDir(),
         fileName,
@@ -431,7 +431,7 @@ class Builder {
   public build(): AndroidBuilder {
     Logger.success('Android build completed successfully!');
     Logger.info(
-      `Artifact: v${this.version}_${this.buildNumber}_${this.environment}.${this.getBundleType()}`,
+      `Artifact: v${this.version}_build_${this.buildNumber}_${this.environment.toUpperCase()}.${this.getBundleType()}`,
     );
 
     return new AndroidBuilder(this);

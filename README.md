@@ -1,103 +1,412 @@
 # @portento/cli
 
-General-purpose CLI for React Native project build and deployment with support for iOS and Android platforms.
+CLI tool for building and deploying React Native applications for iOS and Android platforms.
 
-## Installation
+## 📦 Installation
+
+Install globally via npm:
 
 ```bash
 npm install -g @portento/cli
 ```
 
-## Requirements
-
-- Node.js >= 20.11.0
-- For iOS builds: Xcode, CocoaPods
-- For Android builds: Android SDK, Gradle
-- Ruby (for iOS certificate/provisioning management)
-
-## Usage
-
-After installation, use the `portento` command:
+Or use directly with npx:
 
 ```bash
-portento <command> [options]
+npx @portento/cli <command> [options]
 ```
 
-## Commands
+## 🔧 Requirements
 
-### start
+- **Node.js**: >= 20.11.0
+- **iOS**: Xcode, CocoaPods
+- **Android**: Android SDK, Gradle, JDK
 
-Start Metro bundler with environment-specific configuration.
+## 🚀 Quick Start
 
 ```bash
-portento start --env <environment>
+# Start Metro bundler
+portento start -e dev
+
+# Install on device (auto-detects/starts device)
+portento install -p android
+portento install -p ios
+
+# Build for production
+portento build -p android -t prod -e prod
+portento build -p ios -t prod -e prod
 ```
 
-**Options:**
-- `--env, -e <environment>`: Environment to use (required)
-- `--reset-cache`: Reset Metro bundler cache
+## 📖 Commands
 
-**Example:**
-```bash
-portento start --env dev
-portento start --env prod --reset-cache
-```
+### `start` - Start Metro Bundler
 
-### build
-
-Build iOS or Android application for specified environment.
-
-```bash
-portento build --platform <platform> --env <environment> [options]
-```
-
-**Options:**
-- `--platform, -p <platform>`: Platform to build (ios|android) (required)
-- `--env, -e <environment>`: Environment to use (required)
-- `--build-type, -b <type>`: Build type (debug|prod) (default: debug)
-
-**Examples:**
-```bash
-portento build --platform ios --env prod --build-type prod
-portento build --platform android --env dev --build-type debug
-```
-
-**Output:**
-- iOS: IPA file in `dist/v{VERSION}_{BUILD}_{ENV}.ipa`
-- Android: AAB (prod) or APK (debug) in `dist/v{VERSION}_{BUILD}_{ENV}.{aab|apk}`
-
-### install
-
-Install and run the app on a connected device or simulator.
+Avvia il Metro bundler per lo sviluppo.
 
 ```bash
-portento install --platform <platform> --env <environment> [options]
+portento start [options]
 ```
 
-**Options:**
-- `--platform, -p <platform>`: Platform to install on (ios|android) (required)
-- `--env, -e <environment>`: Environment to use (required)
-- `--device, -d <deviceId>`: Specific device ID to install on (optional)
+**Opzioni:**
 
-**Examples:**
+| Parametro | Alias | Tipo | Descrizione | Default |
+|-----------|-------|------|-------------|---------|
+| `--environment` | `-e` | `string` | Ambiente di destinazione | `dev` |
+| `--reset-cache` | - | `boolean` | Resetta la cache di Metro | `false` |
+
+**Ambienti supportati:**
+- `local` - Sviluppo locale
+- `dev`, `dev3`, `dev6` - Ambienti di sviluppo
+- `qa` - Quality Assurance
+- `staging` - Pre-produzione
+- `prod` - Produzione
+
+**Esempi:**
+
 ```bash
-portento install --platform ios --env dev
-portento install --platform android --env qa --device emulator-5554
+# Avvia con ambiente dev (default)
+portento start
+
+# Avvia con ambiente QA
+portento start -e qa
+
+# Avvia con cache pulita
+portento start -e prod --reset-cache
 ```
 
-### devices
+---
 
-List all connected iOS and Android devices/simulators.
+### `install` - Install and Run App
+
+Installa e avvia l'app su un dispositivo o simulatore. Se non viene specificato un `--deviceId`, il comando trova automaticamente il primo dispositivo disponibile o avvia un emulatore/simulatore.
+
+```bash
+portento install [options]
+```
+
+**Opzioni:**
+
+| Parametro | Alias | Tipo | Descrizione | Default |
+|-----------|-------|------|-------------|---------|
+| `--platform` | `-p` | `android\|ios` | **Obbligatorio**. Piattaforma target | - |
+| `--environment` | `-e` | `string` | Ambiente di destinazione | `dev` |
+| `--buildType` | `-t` | `debug\|prod` | Tipo di build | `prod` |
+| `--deviceId` | - | `string` | ID o nome del dispositivo | - |
+
+**Comportamento automatico senza `--deviceId`:**
+
+**Android:**
+1. Controlla dispositivi connessi con `adb devices`
+2. Se trova un dispositivo connesso, lo usa
+3. Altrimenti, avvia il primo emulatore disponibile con `emulator -avd <name>`
+4. Restituisce il device ID (es. `emulator-5554`)
+
+**iOS:**
+1. Cerca simulatori con `xcrun simctl list devices`
+2. Se trova un simulatore già avviato (stato `Booted`), lo usa
+3. Altrimenti avvia il primo simulatore disponibile
+4. Restituisce il nome del simulatore
+
+**Rilevamento Device ID:**
+- **Android**: Se `--deviceId` non è specificato, usa il primo disponibile
+- **iOS**: 
+  - Se `--deviceId` è in formato UDID (`XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX`), viene usato come UDID del simulatore
+  - Altrimenti viene interpretato come nome del dispositivo o simulatore
+  - Se omesso, usa il primo simulatore disponibile
+
+**Esempi:**
+
+```bash
+# Android - trova/avvia automaticamente un device
+portento install -p android -e qa
+
+# iOS - trova/avvia automaticamente un simulatore
+portento install -p ios -e staging
+
+# Android - dispositivo specifico
+portento install -p android --deviceId=emulator-5554 -e dev
+
+# iOS - simulatore specifico
+portento install -p ios --deviceId="iPhone 15 Pro" -e qa
+
+# iOS - dispositivo fisico tramite UDID
+portento install -p ios --deviceId=00008110-001A12345678901E -e prod
+```
+
+---
+
+### `build` - Build App
+
+Compila l'applicazione per la distribuzione in produzione o debug.
+
+```bash
+portento build [options]
+```
+
+**Opzioni:**
+
+| Parametro | Alias | Tipo | Descrizione | Default |
+|-----------|-------|------|-------------|---------|
+| `--platform` | `-p` | `android\|ios` | **Obbligatorio**. Piattaforma target | - |
+| `--environment` | `-e` | `string` | Ambiente di destinazione | `dev` |
+| `--buildType` | `-t` | `debug\|prod` | Tipo di build | `prod` |
+
+**Artifact Generati:**
+
+#### Android
+
+| buildType | Comando Gradle | Artifact | Posizione | Descrizione |
+|-----------|----------------|----------|-----------|-------------|
+| `debug` | `./gradlew assembleDebug` | **APK** | `dist/v{VERSION}_build_{BUILD}_{ENV}.apk` | File APK installabile per testing |
+| `prod` | `./gradlew bundleRelease` | **AAB** | `dist/v{VERSION}_build_{BUILD}_{ENV}.aab` | Android App Bundle per Google Play Store |
+
+**Esempio nome file Android:**
+- Debug: `v0.0.4_build_1_DEV.apk`
+- Prod: `v0.0.4_build_1_PROD.aab`
+
+#### iOS
+
+| buildType | Configurazione Xcode | Artifact | Posizione | Descrizione |
+|-----------|----------------------|----------|-----------|-------------|
+| `debug` | `Debug` | **IPA** | `dist/v{VERSION}_build_{BUILD}_{ENV}.ipa` | IPA con configurazione Debug |
+| `prod` | `Release` | **IPA** | `dist/v{VERSION}_build_{BUILD}_{ENV}.ipa` | IPA ottimizzato per App Store/TestFlight |
+
+**Esempio nome file iOS:**
+- Debug: `v0.0.4_build_1_STAGING.ipa`
+- Prod: `v0.0.4_build_1_PROD.ipa`
+
+**Workflow di Build:**
+
+**Android - Debug (APK):**
+1. Configura ambiente
+2. Pulisce build precedenti (`./gradlew clean`)
+3. Esegue `./gradlew assembleDebug`
+4. Genera APK pronto per installazione manuale
+
+**Android - Prod (AAB):**
+1. Configura ambiente produzione
+2. Imposta keystore per firma
+3. Esegue `./gradlew bundleRelease`
+4. Genera AAB pronto per Google Play Console
+
+**iOS - Debug/Prod (IPA):**
+1. Installa dipendenze CocoaPods
+2. Esegue archivio Xcode (`xcodebuild archive`)
+3. Esporta IPA (`xcodebuild -exportArchive`)
+4. Copia in `dist/`
+
+**Esempi:**
+
+```bash
+# Android - Debug APK
+portento build -p android -t debug -e qa
+
+# Android - Produzione AAB per Play Store
+portento build -p android -t prod -e prod
+
+# iOS - Debug IPA
+portento build -p ios -t debug -e staging
+
+# iOS - Produzione IPA per App Store
+portento build -p ios -t prod -e prod
+```
+
+---
+
+### `devices` - List Devices
+
+Elenca tutti i dispositivi e simulatori/emulatori disponibili per Android e iOS.
 
 ```bash
 portento devices
 ```
 
-### clean
+**Output:**
 
-Clean all build artifacts, caches, and dependencies.
+**Android:**
+- Dispositivi connessi con device ID da usare in `--deviceId`
+- Emulatori disponibili (non avviati)
+
+**iOS:**
+- Simulatori e dispositivi fisici con UDID e stato
+
+**Esempio output:**
+
+```
+Android - Connected devices
+Use the Device ID in the --deviceId parameter
+
+  • emulator-5554 (Pixel 9 API 35)
+  • RF8N12345AB (Physical Device)
+
+Android - Available emulators (not running)
+To use these, start them first with: emulator -avd <name>
+
+  • Pixel_8_API_34
+  • Pixel_7_API_33
+
+iOS - Available devices and simulators
+iPhone 15 Pro (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX) (Booted)
+iPhone 14 (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX) (Shutdown)
+```
+
+---
+
+### `clean` - Clean Build Artifacts
+
+Pulisce tutti gli artifact di build, cache e dipendenze.
 
 ```bash
+portento clean
+```
+
+**Cosa viene pulito:**
+- Build directory Android (`android/build`, `android/app/build`)
+- Build directory iOS (`ios/build`, `ios/DerivedData`)
+- Node modules cache
+- Metro bundler cache
+- Temporary files
+
+---
+
+## 📝 Esempi Pratici
+
+### Workflow Sviluppo Tipico
+
+```bash
+# Terminal 1 - Avvia Metro bundler
+portento start -e dev6
+
+# Terminal 2 - Installa su dispositivo
+portento install -p ios -e dev6
+```
+
+### Release Android
+
+```bash
+# Build AAB per produzione
+portento build -p android -t prod -e prod
+
+# Output: dist/v0.0.4_build_1_PROD.aab
+# Upload su Google Play Console
+```
+
+### Release iOS
+
+```bash
+# Build IPA per produzione
+portento build -p ios -t prod -e prod
+
+# Output: dist/v0.0.4_build_1_PROD.ipa
+# Upload su App Store Connect con Transporter
+```
+
+### Testing su Dispositivo Fisico
+
+```bash
+# Android - trova device ID
+adb devices
+portento install -p android --deviceId="RF8N12345AB" -e qa
+
+# iOS - trova UDID
+instruments -s devices
+portento install -p ios --deviceId=00008110-001A12345678901E -e qa
+```
+
+---
+
+## 🐛 Troubleshooting
+
+### Android - Build Fallisce
+
+```bash
+cd android
+./gradlew clean
+cd ..
+portento build -p android -t debug
+```
+
+### iOS - Pod Install Fallisce
+
+```bash
+cd ios
+pod deintegrate
+pod install --repo-update
+cd ..
+portento build -p ios -t debug
+```
+
+### Metro Bundler - Problemi di Cache
+
+```bash
+portento start --reset-cache
+
+# In un altro terminale
+watchman watch-del-all
+```
+
+### ADB Non Rileva Dispositivi
+
+```bash
+adb kill-server
+adb start-server
+adb devices
+```
+
+---
+
+## 📂 Struttura Artifact
+
+```
+dist/
+├── v0.0.4_build_1_DEV.apk          # Android Debug APK
+├── v0.0.4_build_1_PROD.aab         # Android Production AAB
+├── v0.0.4_build_1_STAGING.ipa      # iOS Staging IPA
+└── v0.0.4_build_1_PROD.ipa         # iOS Production IPA
+```
+
+**Formato nome file:** `v{VERSION}_build_{BUILD_NUMBER}_{ENVIRONMENT}.{EXTENSION}`
+
+---
+
+## 🔑 Note Importanti
+
+### Tipi di Artifact
+
+- **APK (Android Package)**: File installabile direttamente su dispositivi Android. Usato per testing e distribuzione interna.
+- **AAB (Android App Bundle)**: Formato ottimizzato per Google Play Store. Google Play genera APK specifici per ogni dispositivo.
+- **IPA (iOS App Store Package)**: File pacchetto iOS per distribuzione via App Store, TestFlight o installazione ad-hoc.
+
+### Build Type
+
+- **debug**: Build non ottimizzata con simboli di debug, adatta per sviluppo e testing
+- **prod**: Build ottimizzata, obfuscata, firmata per distribuzione su store
+
+### Ambienti
+
+Ogni ambiente ha le proprie configurazioni (API endpoints, feature flags, ecc.):
+- `local`: Sviluppo locale
+- `dev3`, `dev6`: Ambienti di sviluppo separati
+- `qa`: Quality Assurance testing
+- `staging`: Pre-produzione
+- `prod`: Produzione
+
+---
+
+## 📄 License
+
+MIT
+
+---
+
+## 🤝 Contributing
+
+Contributions are welcome! Please open an issue or submit a pull request.
+
+---
+
+**Built with ❤️ for React Native developers**
+
 portento clean [options]
 ```
 
@@ -215,11 +524,19 @@ All commands provide detailed error messages. If a command fails:
 3. Ensure platform tools are installed (Xcode, Android SDK)
 4. Try running `portento clean --deep` and rebuilding
 
+## Development
+
+To work on this CLI:
+
+```bash
+git clone https://github.com/portento/cli.git
+cd cli
+npm install
+npm run build
+npm link
+```
 
 ## License
 
 MIT
 
-## Support
-
-For issues and questions, please visit: https://github.com/portento/cli/issuesMIT

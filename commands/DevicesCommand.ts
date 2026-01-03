@@ -26,13 +26,45 @@ export class DevicesCommand {
     Logger.step('Android', 'Connected devices');
 
     try {
-      const devices: string = execSync('adb devices -l', {encoding: 'utf-8'});
-      console.log(devices);
+      const output: string = execSync('adb devices -l', {encoding: 'utf-8'});
+      const lines: string[] = output.split('\n').filter(line => line.trim());
+
+      // Skip first line "List of devices attached"
+      const deviceLines: string[] = lines.slice(1).filter(line => line.trim());
+
+      if (deviceLines.length === 0) {
+        Logger.info('No Android devices connected');
+      } else {
+        Logger.info('Use the Device ID in the --deviceId parameter\n');
+        deviceLines.forEach(line => {
+          // Parse line format: "emulator-5554    device product:sdk_gphone64_arm64 model:Pixel_9_API_35 device:emu64a"
+          const match = line.match(/^(\S+)\s+(\w+)/);
+          if (match) {
+            const deviceId: string = match[1];
+            const status: string = match[2];
+
+            // Extract model name if available
+            const modelMatch = line.match(/model:([^\s]+)/);
+            const model: string = modelMatch
+              ? modelMatch[1].replace(/_/g, ' ')
+              : '';
+
+            if (status === 'device') {
+              if (model) {
+                console.log(`  • ${deviceId} (${model})`);
+              } else {
+                console.log(`  • ${deviceId}`);
+              }
+            }
+          }
+        });
+      }
     } catch (error: unknown) {
       Logger.warn('Failed to list Android devices. Make sure adb is in PATH');
     }
 
-    Logger.step('Android', 'Available emulators');
+    Logger.info(''); // Empty line
+    Logger.step('Android', 'Available emulators (not running)');
 
     try {
       const emulators: string = execSync('emulator -list-avds', {
@@ -40,7 +72,15 @@ export class DevicesCommand {
       });
 
       if (emulators.trim()) {
-        console.log(emulators);
+        Logger.info(
+          'To use these, start them first with: emulator -avd <name>\n',
+        );
+        emulators
+          .split('\n')
+          .filter(line => line.trim())
+          .forEach(name => {
+            console.log(`  • ${name}`);
+          });
       } else {
         Logger.info('No Android emulators found');
       }

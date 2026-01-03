@@ -327,7 +327,7 @@ class Builder {
       // Move IPA to dist folder
       PathResolver.ensureDistDir();
 
-      const fileName: string = `v${this.version}_${this.buildNumber}_${this.environment}.ipa`;
+      const fileName: string = `v${this.version}_build_${this.buildNumber}_${this.environment.toUpperCase()}.ipa`;
       const sourcePath: string = path.resolve(outDir, ipaFileName);
       const distPath: string = path.resolve(
         PathResolver.getDistDir(),
@@ -402,7 +402,7 @@ class Builder {
   public build(): IOSBuilder {
     Logger.success('iOS build completed successfully!');
     Logger.info(
-      `Artifact: v${this.version}_${this.buildNumber}_${this.environment}.ipa`,
+      `Artifact: v${this.version}_build_${this.buildNumber}_${this.environment.toUpperCase()}.ipa`,
     );
 
     return new IOSBuilder(this);
