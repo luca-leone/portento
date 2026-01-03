@@ -1,4 +1,4 @@
-import {execSync} from 'child_process';
+import {execSync, spawn} from 'child_process';
 import {PathResolver} from '../services/PathResolver';
 import {EnvironmentService} from '../services/EnvironmentService';
 import {PropertyService} from '../services/PropertyService';
@@ -128,18 +128,65 @@ export class InstallCommand {
         Logger.info(`Starting emulator: ${firstEmulator}`);
         Logger.info('This may take a few moments...');
 
-        // Start emulator in background
-        execSync(`emulator -avd ${firstEmulator} &`, {
-          stdio: 'pipe',
-          shell: '/bin/bash',
+        // Start emulator in background using spawn
+        const emulatorProcess = spawn('emulator', ['-avd', firstEmulator], {
+          detached: true,
+          stdio: 'ignore',
         });
+        emulatorProcess.unref();
 
-        // Wait for device to be online
-        Logger.info('Waiting for emulator to boot...');
-        execSync('adb wait-for-device', {stdio: 'pipe'});
+        Logger.info('Emulator process started, waiting for device...');
 
-        // Give it a few more seconds to fully boot
-        execSync('sleep 5', {stdio: 'pipe'});
+        // Wait for device to be online with timeout
+        try {
+          execSync('adb wait-for-device', {
+            stdio: 'pipe',
+            timeout: 120000, // 2 minutes timeout
+          });
+        } catch (error: unknown) {
+          const errorMessage: string =
+            error instanceof Error ? error.message : String(error);
+          Logger.warn(`Timeout waiting for emulator to boot: ${errorMessage}`);
+          Logger.info(
+            'The emulator is starting in the background. You can run the install command again in a few moments.',
+          );
+          return undefined;
+        }
+
+        // Wait for emulator to fully boot (check boot_completed property)
+        Logger.info('Device detected, waiting for full boot...');
+        let bootCompleted: boolean = false;
+        let attempts: number = 0;
+        const maxAttempts: number = 30;
+
+        while (!bootCompleted && attempts < maxAttempts) {
+          try {
+            const bootStatus: string = execSync(
+              'adb shell getprop sys.boot_completed',
+              {encoding: 'utf-8', timeout: 5000},
+            ).trim();
+            if (bootStatus === '1') {
+              bootCompleted = true;
+              break;
+            }
+          } catch {
+            // Property not ready yet, continue waiting
+          }
+
+          execSync('sleep 2', {stdio: 'pipe'});
+          attempts++;
+          Logger.info(`Boot check ${attempts}/${maxAttempts}...`);
+        }
+
+        if (!bootCompleted) {
+          Logger.warn(
+            'Emulator is taking longer than expected to boot completely.',
+          );
+          Logger.info(
+            'You can try running the install command again in a few moments.',
+          );
+          return undefined;
+        }
 
         // Get the device ID of the started emulator
         const newDevicesOutput: string = execSync('adb devices', {
