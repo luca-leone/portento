@@ -1,4 +1,4 @@
-import {execSync, spawn} from 'child_process';
+import {execSync, spawn, type ChildProcess} from 'child_process';
 import {PathResolver} from '../services/PathResolver';
 import {EnvironmentService} from '../services/EnvironmentService';
 import {PropertyService} from '../services/PropertyService';
@@ -76,7 +76,7 @@ export class InstallCommand {
     let command: string = 'npx react-native run-android';
 
     if (deviceId) {
-      command += ` --deviceId=${deviceId}`;
+      command += ` --device=${deviceId}`;
     }
 
     Logger.info('Installing Android app...');
@@ -129,19 +129,30 @@ export class InstallCommand {
         Logger.info('This may take a few moments...');
 
         // Start emulator in background using spawn
-        const emulatorProcess = spawn('emulator', ['-avd', firstEmulator], {
-          detached: true,
-          stdio: 'ignore',
-        });
+        const emulatorProcess: ChildProcess = spawn(
+          'emulator',
+          ['-avd', firstEmulator],
+          {
+            detached: true,
+            stdio: 'ignore',
+          },
+        );
+
+        // Unref to allow parent process to exit independently
         emulatorProcess.unref();
+
+        // Kill emulator process reference to avoid memory leaks
+        emulatorProcess.stdout?.destroy();
+        emulatorProcess.stderr?.destroy();
+        emulatorProcess.stdin?.destroy();
 
         Logger.info('Emulator process started, waiting for device...');
 
-        // Wait for device to be online with timeout
+        // Wait for device to be online with shorter timeout
         try {
           execSync('adb wait-for-device', {
             stdio: 'pipe',
-            timeout: 120000, // 2 minutes timeout
+            timeout: 60000, // 1 minute timeout (reduced from 2)
           });
         } catch (error: unknown) {
           const errorMessage: string =
@@ -155,36 +166,65 @@ export class InstallCommand {
 
         // Wait for emulator to fully boot (check boot_completed property)
         Logger.info('Device detected, waiting for full boot...');
-        let bootCompleted: boolean = false;
-        let attempts: number = 0;
-        const maxAttempts: number = 30;
 
-        while (!bootCompleted && attempts < maxAttempts) {
+        const startTime: number = Date.now();
+        const maxWaitTime: number = 45000; // 45 seconds max total wait
+        const checkInterval: number = 3000; // Check every 3 seconds
+        let bootCompleted: boolean = false;
+
+        while (!bootCompleted) {
+          // Safety check: total time limit
+          const elapsedTime: number = Date.now() - startTime;
+          if (elapsedTime > maxWaitTime) {
+            Logger.warn(
+              'Emulator is taking longer than expected to boot completely.',
+            );
+            Logger.info(
+              'You can try running the install command again in a few moments.',
+            );
+            return undefined;
+          }
+
           try {
             const bootStatus: string = execSync(
               'adb shell getprop sys.boot_completed',
               {encoding: 'utf-8', timeout: 5000},
             ).trim();
+
             if (bootStatus === '1') {
               bootCompleted = true;
+              Logger.success('Emulator fully booted!');
               break;
             }
-          } catch {
-            // Property not ready yet, continue waiting
-          }
 
-          execSync('sleep 2', {stdio: 'pipe'});
-          attempts++;
-          Logger.info(`Boot check ${attempts}/${maxAttempts}...`);
+            // Calculate remaining time
+            const remainingTime: number = Math.ceil(
+              (maxWaitTime - elapsedTime) / 1000,
+            );
+            Logger.info(
+              `Waiting for boot completion (${remainingTime}s remaining)...`,
+            );
+
+            // Wait before next check using Atomics.wait (blocking but safe)
+            const buffer: SharedArrayBuffer = new SharedArrayBuffer(4);
+            const view: Int32Array = new Int32Array(buffer);
+            Atomics.wait(view, 0, 0, checkInterval);
+          } catch (checkError: unknown) {
+            // If we can't check boot status, emulator might not be ready yet
+            // Continue waiting unless we hit the time limit
+            const remainingTime: number = Math.ceil(
+              (maxWaitTime - (Date.now() - startTime)) / 1000,
+            );
+            if (remainingTime > 0) {
+              Logger.info(`Emulator starting (${remainingTime}s remaining)...`);
+              const buffer: SharedArrayBuffer = new SharedArrayBuffer(4);
+              const view: Int32Array = new Int32Array(buffer);
+              Atomics.wait(view, 0, 0, checkInterval);
+            }
+          }
         }
 
         if (!bootCompleted) {
-          Logger.warn(
-            'Emulator is taking longer than expected to boot completely.',
-          );
-          Logger.info(
-            'You can try running the install command again in a few moments.',
-          );
           return undefined;
         }
 
