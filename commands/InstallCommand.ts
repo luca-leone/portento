@@ -73,14 +73,58 @@ export class InstallCommand {
       deviceId = InstallCommand.findOrStartAndroidDevice();
     }
 
-    let command: string = 'npx react-native run-android';
+    const args: Array<string> = ['react-native', 'run-android'];
 
     if (deviceId) {
-      command += ` --device=${deviceId}`;
+      args.push(`--device=${deviceId}`);
     }
 
     Logger.info('Installing Android app...');
-    execSync(command, {stdio: 'inherit', cwd: projectRoot});
+
+    // Use spawn instead of execSync to properly handle streams and prevent memory leaks
+    const installProcess: ChildProcess = spawn('npx', args, {
+      cwd: projectRoot,
+      stdio: 'pipe',
+    });
+
+    // Pipe output to console but destroy streams when done
+    installProcess.stdout?.on('data', (data: Buffer) => {
+      process.stdout.write(data);
+    });
+
+    installProcess.stderr?.on('data', (data: Buffer) => {
+      process.stderr.write(data);
+    });
+
+    installProcess.on('close', (code: number | null) => {
+      // Clean up streams
+      installProcess.stdout?.destroy();
+      installProcess.stderr?.destroy();
+      installProcess.stdin?.destroy();
+
+      if (code !== 0) {
+        throw new CommandExecutionError(
+          `React Native installation failed with exit code ${code}`,
+          {exitCode: code},
+        );
+      }
+    });
+
+    // Wait for the process to complete synchronously
+    const waitSync: () => void = (): void => {
+      const buffer: SharedArrayBuffer = new SharedArrayBuffer(4);
+      const view: Int32Array = new Int32Array(buffer);
+      while (installProcess.exitCode === null) {
+        Atomics.wait(view, 0, 0, 100); // Check every 100ms
+      }
+    };
+
+    waitSync();
+
+    // Final cleanup
+    installProcess.stdout?.destroy();
+    installProcess.stderr?.destroy();
+    installProcess.stdin?.destroy();
   }
 
   private static findOrStartAndroidDevice(): string | undefined {
@@ -351,7 +395,7 @@ export class InstallCommand {
       deviceId = InstallCommand.findFirstIOSSimulator();
     }
 
-    let command: string = 'npx react-native run-ios';
+    const args: Array<string> = ['react-native', 'run-ios'];
 
     if (deviceId) {
       // Check if deviceId looks like a UDID (simulator) or device name
@@ -362,17 +406,61 @@ export class InstallCommand {
 
       if (isUDID) {
         // Simulator UDID
-        command += ` --udid="${deviceId}"`;
+        args.push(`--udid=${deviceId}`);
       } else {
         // Physical device name or simulator name
-        command += ` --device="${deviceId}"`;
+        args.push(`--device=${deviceId}`);
       }
     } else {
       // No device specified and couldn't find one, use default simulator
-      command += ' --simulator';
+      args.push('--simulator');
     }
 
     Logger.info('Installing iOS app...');
-    execSync(command, {stdio: 'inherit', cwd: projectRoot});
+
+    // Use spawn instead of execSync to properly handle streams and prevent memory leaks
+    const installProcess: ChildProcess = spawn('npx', args, {
+      cwd: projectRoot,
+      stdio: 'pipe',
+    });
+
+    // Pipe output to console but destroy streams when done
+    installProcess.stdout?.on('data', (data: Buffer) => {
+      process.stdout.write(data);
+    });
+
+    installProcess.stderr?.on('data', (data: Buffer) => {
+      process.stderr.write(data);
+    });
+
+    installProcess.on('close', (code: number | null) => {
+      // Clean up streams
+      installProcess.stdout?.destroy();
+      installProcess.stderr?.destroy();
+      installProcess.stdin?.destroy();
+
+      if (code !== 0) {
+        throw new CommandExecutionError(
+          `React Native installation failed with exit code ${code}`,
+          {exitCode: code},
+        );
+      }
+    });
+
+    // Wait for the process to complete synchronously
+    const waitSync: () => void = (): void => {
+      const buffer: SharedArrayBuffer = new SharedArrayBuffer(4);
+      const view: Int32Array = new Int32Array(buffer);
+      while (installProcess.exitCode === null) {
+        Atomics.wait(view, 0, 0, 100); // Check every 100ms
+      }
+    };
+
+    waitSync();
+
+    // Final cleanup
+    installProcess.stdout?.destroy();
+    installProcess.stderr?.destroy();
+    installProcess.stdin?.destroy();
   }
 }
