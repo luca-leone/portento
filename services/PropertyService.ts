@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import {PathResolver} from './PathResolver';
 import type {EnvironmentService} from './EnvironmentService';
 import type {EnvironmentsData} from '../types';
@@ -17,10 +18,7 @@ export class PropertyService {
     const content: string = this.generateDefinitionContent(environments);
 
     const definitionFile: string = PathResolver.getEnvironmentsDefinitionFile();
-    const definitionDir: string = definitionFile.substring(
-      0,
-      definitionFile.lastIndexOf('/'),
-    );
+    const definitionDir: string = path.dirname(definitionFile);
 
     if (!fs.existsSync(definitionDir)) {
       fs.mkdirSync(definitionDir, {recursive: true});

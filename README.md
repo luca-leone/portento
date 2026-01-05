@@ -252,6 +252,85 @@ iPhone 14 (XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX) (Shutdown)
 
 ---
 
+### `open` - Open Emulator/Simulator
+
+Interactively select and open an Android emulator or iOS simulator.
+
+```bash
+portento open [options]
+```
+
+**Options:**
+
+| Parameter | Alias | Type | Description | Default |
+|-----------|-------|------|-------------|---------|
+| `--platform` | `-p` | `android\|ios` | **Required**. Target platform | - |
+
+**Android Behavior:**
+1. Lists all available Android Virtual Devices (AVDs)
+2. Checks which emulators are currently running (via `adb devices`)
+3. Shows running emulators with a ▶ indicator
+4. Prompts for interactive selection by number
+5. Starts the selected emulator in detached background mode
+
+**iOS Behavior:**
+1. Lists all available iOS simulators
+2. Displays iOS version for each simulator
+3. Shows running simulators with a ▶ (Running) indicator
+4. Prompts for interactive selection by number
+5. Boots the selected simulator if not already running
+6. Opens Simulator.app and brings it to the front
+
+**Examples:**
+
+```bash
+# Android - Interactive emulator selection
+portento open -p android
+
+# Output:
+# Available Android Emulators:
+#
+#   1. Pixel_9_API_35
+#   2. Pixel_7_API_34 ▶
+#   3. Nexus_5X_API_30
+#
+# Select emulator to open (number): 1
+
+# iOS - Interactive simulator selection
+portento open -p ios
+
+# Output:
+# Available iOS Simulators:
+#
+#   1. iPhone 15 Pro (iOS 17.2)
+#   2. iPhone 15 (iOS 17.2)
+#   3. iPhone 14 Pro (iOS 16.4) ▶ (Running)
+#
+# Select simulator to open (number): 1
+```
+
+**Shorthand scripts (recommended):**
+
+```bash
+# Via yarn scripts (defined in package.json)
+yarn open:android
+yarn open:ios
+```
+
+**Features:**
+- Interactive terminal selection with validation
+- Shows running status for all devices
+- Android emulators start in background (non-blocking)
+- iOS simulators boot automatically if needed
+- Cross-platform safe command execution
+- Graceful error handling with helpful messages
+
+**Requirements:**
+- **Android**: Android SDK emulator must be in PATH
+- **iOS**: Xcode Command Line Tools (`xcrun simctl`)
+
+---
+
 ### `clean` - Clean Build Artifacts
 
 Clean all build artifacts, caches, and dependencies.
@@ -311,6 +390,20 @@ portento install -p android --deviceId="RF8N12345AB" -e qa
 # iOS - find UDID
 instruments -s devices
 portento install -p ios --deviceId=00008110-001A12345678901E -e qa
+```
+
+### Quick Emulator/Simulator Launch
+
+```bash
+# Open Android emulator interactively
+yarn open:android
+
+# Open iOS simulator interactively  
+yarn open:ios
+
+# Or use portento directly
+portento open -p android
+portento open -p ios
 ```
 
 ---

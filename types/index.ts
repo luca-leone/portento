@@ -74,4 +74,20 @@ export type DevicesCommandArgs = {
   l: boolean;
 };
 
+export type OpenCommandArgs = {
+  platform: string;
+  p: string;
+};
+
+export type AndroidEmulator = {
+  name: string;
+};
+
+export type IOSSimulator = {
+  name: string;
+  udid: string;
+  state: string;
+  runtime: string;
+};
+
 export type CleanCommandArgs = Record<string, unknown>;

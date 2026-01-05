@@ -85,16 +85,38 @@ export class CleanCommand {
       const certificateService: CertificateService = new CertificateService();
       certificateService.removeAndroidKeystore();
 
-      // Restore gradle.properties if backup exists
+      // Restore gradle.properties with xxxxxx placeholders
       const gradlePropertiesFile: string =
         PathResolver.getAndroidGradlePropertiesFile();
       const backupFile: string = gradlePropertiesFile + '.backup';
 
       if (fs.existsSync(backupFile)) {
-        const backupContent: string = fs.readFileSync(backupFile, 'utf-8');
-        fs.writeFileSync(gradlePropertiesFile, backupContent, 'utf-8');
+        // Read backup and restore with placeholders
+        let content: string = fs.readFileSync(backupFile, 'utf-8');
+        content = content.replace(/(?<=ANDROID_STORE_FILE=).*$/gm, 'xxxxxx');
+        content = content.replace(/(?<=ANDROID_KEY_ALIAS=).*$/gm, 'xxxxxx');
+        content = content.replace(
+          /(?<=ANDROID_STORE_PASSWORD=).*$/gm,
+          'xxxxxx',
+        );
+        content = content.replace(/(?<=ANDROID_KEY_PASSWORD=).*$/gm, 'xxxxxx');
+
+        fs.writeFileSync(gradlePropertiesFile, content, 'utf-8');
         fs.unlinkSync(backupFile);
-        Logger.info('Restored gradle.properties');
+        Logger.info('Restored gradle.properties with placeholders');
+      } else {
+        // No backup exists, just replace values with xxxxxx
+        let content: string = fs.readFileSync(gradlePropertiesFile, 'utf-8');
+        content = content.replace(/(?<=ANDROID_STORE_FILE=).*$/gm, 'xxxxxx');
+        content = content.replace(/(?<=ANDROID_KEY_ALIAS=).*$/gm, 'xxxxxx');
+        content = content.replace(
+          /(?<=ANDROID_STORE_PASSWORD=).*$/gm,
+          'xxxxxx',
+        );
+        content = content.replace(/(?<=ANDROID_KEY_PASSWORD=).*$/gm, 'xxxxxx');
+
+        fs.writeFileSync(gradlePropertiesFile, content, 'utf-8');
+        Logger.info('Reset gradle.properties to placeholders');
       }
 
       Logger.success('Android artifacts cleaned');

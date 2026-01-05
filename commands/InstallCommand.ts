@@ -1,4 +1,10 @@
-import {execSync, spawn, type ChildProcess} from 'child_process';
+import {
+  execSync,
+  spawn,
+  spawnSync,
+  type ChildProcess,
+  type SpawnSyncReturns,
+} from 'child_process';
 import {PathResolver} from '../services/PathResolver';
 import {EnvironmentService} from '../services/EnvironmentService';
 import {PropertyService} from '../services/PropertyService';
@@ -81,50 +87,18 @@ export class InstallCommand {
 
     Logger.info('Installing Android app...');
 
-    // Use spawn instead of execSync to properly handle streams and prevent memory leaks
-    const installProcess: ChildProcess = spawn('npx', args, {
+    // Use spawnSync for synchronous execution with real-time output
+    const result: SpawnSyncReturns<Buffer> = spawnSync('npx', args, {
       cwd: projectRoot,
-      stdio: 'pipe',
+      stdio: 'inherit', // Safe with spawnSync - shows output in real-time
     });
 
-    // Pipe output to console but destroy streams when done
-    installProcess.stdout?.on('data', (data: Buffer) => {
-      process.stdout.write(data);
-    });
-
-    installProcess.stderr?.on('data', (data: Buffer) => {
-      process.stderr.write(data);
-    });
-
-    installProcess.on('close', (code: number | null) => {
-      // Clean up streams
-      installProcess.stdout?.destroy();
-      installProcess.stderr?.destroy();
-      installProcess.stdin?.destroy();
-
-      if (code !== 0) {
-        throw new CommandExecutionError(
-          `React Native installation failed with exit code ${code}`,
-          {exitCode: code},
-        );
-      }
-    });
-
-    // Wait for the process to complete synchronously
-    const waitSync: () => void = (): void => {
-      const buffer: SharedArrayBuffer = new SharedArrayBuffer(4);
-      const view: Int32Array = new Int32Array(buffer);
-      while (installProcess.exitCode === null) {
-        Atomics.wait(view, 0, 0, 100); // Check every 100ms
-      }
-    };
-
-    waitSync();
-
-    // Final cleanup
-    installProcess.stdout?.destroy();
-    installProcess.stderr?.destroy();
-    installProcess.stdin?.destroy();
+    if (result.status !== 0) {
+      throw new CommandExecutionError(
+        `React Native installation failed with exit code ${result.status}`,
+        {exitCode: result.status},
+      );
+    }
   }
 
   private static findOrStartAndroidDevice(): string | undefined {
@@ -160,9 +134,21 @@ export class InstallCommand {
 
       // No devices connected, try to start first available emulator
       Logger.info('No devices connected, checking for available emulators...');
-      const emulatorsOutput: string = execSync('emulator -list-avds', {
-        encoding: 'utf-8',
-      });
+
+      let emulatorsOutput: string = '';
+      try {
+        emulatorsOutput = execSync('emulator -list-avds', {
+          encoding: 'utf-8',
+        });
+      } catch (error: unknown) {
+        const errorMessage: string =
+          error instanceof Error ? error.message : String(error);
+        Logger.warn(
+          `Failed to list emulators: ${errorMessage}. Make sure Android SDK emulator is in PATH.`,
+        );
+        return undefined;
+      }
+
       const emulators: Array<string> = emulatorsOutput
         .split('\n')
         .filter((line: string) => line.trim());
@@ -343,7 +329,7 @@ export class InstallCommand {
             Logger.info(
               `Found booted simulator: ${booted.name} (${booted.udid})`,
             );
-            return booted.name;
+            return booted.udid;
           }
 
           // Keep track of first available
@@ -366,7 +352,7 @@ export class InstallCommand {
         execSync('sleep 3', {stdio: 'pipe'});
 
         Logger.success(`Simulator ready: ${firstAvailable.name}`);
-        return firstAvailable.name;
+        return firstAvailable.udid;
       }
 
       Logger.warn('No iOS simulators found');
@@ -385,10 +371,25 @@ export class InstallCommand {
 
     // Run pod install first to ensure dependencies are up to date
     Logger.info('Running pod install...');
-    execSync('pod deintegrate && pod install --repo-update', {
-      stdio: 'inherit',
-      cwd: iosDir,
-    });
+
+    // Use spawnSync for pod install - allows real-time output without blocking event loop
+    const podResult: SpawnSyncReturns<Buffer> = spawnSync(
+      'sh',
+      ['-c', 'pod deintegrate && pod install --repo-update'],
+      {
+        cwd: iosDir,
+        stdio: 'inherit', // Safe with spawnSync - shows output in real-time
+      },
+    );
+
+    if (podResult.status !== 0) {
+      throw new CommandExecutionError(
+        `Pod install failed with exit code ${podResult.status}`,
+        {exitCode: podResult.status},
+      );
+    }
+
+    Logger.success('Pod install completed');
 
     // If no deviceId is specified, try to find the first available simulator
     if (!deviceId) {
@@ -418,49 +419,17 @@ export class InstallCommand {
 
     Logger.info('Installing iOS app...');
 
-    // Use spawn instead of execSync to properly handle streams and prevent memory leaks
-    const installProcess: ChildProcess = spawn('npx', args, {
+    // Use spawnSync for synchronous execution with real-time output
+    const result: SpawnSyncReturns<Buffer> = spawnSync('npx', args, {
       cwd: projectRoot,
-      stdio: 'pipe',
+      stdio: 'inherit', // Safe with spawnSync - shows output in real-time
     });
 
-    // Pipe output to console but destroy streams when done
-    installProcess.stdout?.on('data', (data: Buffer) => {
-      process.stdout.write(data);
-    });
-
-    installProcess.stderr?.on('data', (data: Buffer) => {
-      process.stderr.write(data);
-    });
-
-    installProcess.on('close', (code: number | null) => {
-      // Clean up streams
-      installProcess.stdout?.destroy();
-      installProcess.stderr?.destroy();
-      installProcess.stdin?.destroy();
-
-      if (code !== 0) {
-        throw new CommandExecutionError(
-          `React Native installation failed with exit code ${code}`,
-          {exitCode: code},
-        );
-      }
-    });
-
-    // Wait for the process to complete synchronously
-    const waitSync: () => void = (): void => {
-      const buffer: SharedArrayBuffer = new SharedArrayBuffer(4);
-      const view: Int32Array = new Int32Array(buffer);
-      while (installProcess.exitCode === null) {
-        Atomics.wait(view, 0, 0, 100); // Check every 100ms
-      }
-    };
-
-    waitSync();
-
-    // Final cleanup
-    installProcess.stdout?.destroy();
-    installProcess.stderr?.destroy();
-    installProcess.stdin?.destroy();
+    if (result.status !== 0) {
+      throw new CommandExecutionError(
+        `React Native installation failed with exit code ${result.status}`,
+        {exitCode: result.status},
+      );
+    }
   }
 }

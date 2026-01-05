@@ -1,4 +1,5 @@
 import * as fs from 'fs';
+import * as path from 'path';
 import * as yaml from 'yaml';
 import {PathResolver} from './PathResolver';
 import {CertificateNotFoundError} from '../errors';
@@ -107,16 +108,22 @@ export class CertificateService {
     }
 
     const source: string = PathResolver.getAndroidKeystoreFile();
-    const destination: string =
-      PathResolver.getAndroidDir() + '/release.keystore';
+    const destination: string = path.join(
+      PathResolver.getAndroidDir(),
+      'app',
+      'release.keystore',
+    );
 
     fs.copyFileSync(source, destination);
     Logger.info('Android keystore copied to project');
   }
 
   public removeAndroidKeystore(): void {
-    const keystorePath: string =
-      PathResolver.getAndroidDir() + '/release.keystore';
+    const keystorePath: string = path.join(
+      PathResolver.getAndroidDir(),
+      'app',
+      'release.keystore',
+    );
 
     if (PathResolver.fileExists(keystorePath)) {
       fs.unlinkSync(keystorePath);

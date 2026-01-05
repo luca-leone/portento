@@ -55,7 +55,6 @@ class Builder {
   private environmentService: EnvironmentService;
   private certificateService: CertificateService;
   private pushNotificationService: PushNotificationService;
-  private gradlePropertiesBackup: string | null = null;
 
   public constructor(
     environment: string,
@@ -150,7 +149,6 @@ class Builder {
         'utf-8',
       );
       fs.writeFileSync(backupFile, originalContent, 'utf-8');
-      this.gradlePropertiesBackup = backupFile;
 
       // Register cleanup handler
       cleanupRegistry.register(() => {
@@ -272,7 +270,9 @@ class Builder {
         `android-${this.environment}.map`,
       );
 
-      const command: string = `${rnxCli} bundle --platform android --dev false --entry-file index.ts --bundle-output ${bundleDir}/index.android.bundle --assets-dest ${bundleDir} --sourcemap-output ${sourcemapOutput}`;
+      const bundleOutput: string = path.join(bundleDir, 'index.android.bundle');
+
+      const command: string = `${rnxCli} bundle --platform android --dev false --entry-file index.ts --bundle-output ${bundleOutput} --assets-dest ${bundleDir} --sourcemap-output ${sourcemapOutput}`;
 
       Logger.info('Running rnx-cli bundle...');
       execSync(command, {stdio: 'inherit', cwd: projectRoot});
@@ -408,19 +408,26 @@ class Builder {
   }
 
   private restoreGradleProperties(): void {
-    if (
-      this.gradlePropertiesBackup &&
-      fs.existsSync(this.gradlePropertiesBackup)
-    ) {
-      const gradlePropertiesFile: string =
-        PathResolver.getAndroidGradlePropertiesFile();
-      const backupContent: string = fs.readFileSync(
-        this.gradlePropertiesBackup,
-        'utf-8',
-      );
-      fs.writeFileSync(gradlePropertiesFile, backupContent, 'utf-8');
-      fs.unlinkSync(this.gradlePropertiesBackup);
-      Logger.info('Gradle properties restored');
+    const gradlePropertiesFile: string =
+      PathResolver.getAndroidGradlePropertiesFile();
+    const backupFile: string = gradlePropertiesFile + '.backup';
+
+    if (fs.existsSync(backupFile)) {
+      // Read backup content
+      let content: string = fs.readFileSync(backupFile, 'utf-8');
+
+      // Replace values with xxxxxx placeholders
+      content = content.replace(/(?<=ANDROID_STORE_FILE=).*$/gm, 'xxxxxx');
+      content = content.replace(/(?<=ANDROID_KEY_ALIAS=).*$/gm, 'xxxxxx');
+      content = content.replace(/(?<=ANDROID_STORE_PASSWORD=).*$/gm, 'xxxxxx');
+      content = content.replace(/(?<=ANDROID_KEY_PASSWORD=).*$/gm, 'xxxxxx');
+
+      // Write restored content with placeholders
+      fs.writeFileSync(gradlePropertiesFile, content, 'utf-8');
+
+      // Remove backup file
+      fs.unlinkSync(backupFile);
+      Logger.info('Gradle properties restored with placeholders');
     }
   }
 

@@ -27,24 +27,29 @@ export class DevicesCommand {
 
     try {
       const output: string = execSync('adb devices -l', {encoding: 'utf-8'});
-      const lines: string[] = output.split('\n').filter(line => line.trim());
+      const lines: Array<string> = output
+        .split('\n')
+        .filter((line: string) => line.trim());
 
       // Skip first line "List of devices attached"
-      const deviceLines: string[] = lines.slice(1).filter(line => line.trim());
+      const deviceLines: Array<string> = lines
+        .slice(1)
+        .filter((line: string) => line.trim());
 
       if (deviceLines.length === 0) {
         Logger.info('No Android devices connected');
       } else {
         Logger.info('Use the Device ID in the --deviceId parameter\n');
-        deviceLines.forEach(line => {
+        deviceLines.forEach((line: string) => {
           // Parse line format: "emulator-5554    device product:sdk_gphone64_arm64 model:Pixel_9_API_35 device:emu64a"
-          const match = line.match(/^(\S+)\s+(\w+)/);
+          const match: RegExpMatchArray | null = line.match(/^(\S+)\s+(\w+)/);
           if (match) {
             const deviceId: string = match[1];
             const status: string = match[2];
 
             // Extract model name if available
-            const modelMatch = line.match(/model:([^\s]+)/);
+            const modelMatch: RegExpMatchArray | null =
+              line.match(/model:([^\s]+)/);
             const model: string = modelMatch
               ? modelMatch[1].replace(/_/g, ' ')
               : '';
@@ -77,8 +82,8 @@ export class DevicesCommand {
         );
         emulators
           .split('\n')
-          .filter(line => line.trim())
-          .forEach(name => {
+          .filter((line: string) => line.trim())
+          .forEach((name: string) => {
             console.log(`  • ${name}`);
           });
       } else {

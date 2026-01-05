@@ -12,6 +12,7 @@ import {
   BuildCommand,
   InstallCommand,
   DevicesCommand,
+  OpenCommand,
   CleanCommand,
 } from './commands';
 
@@ -164,6 +165,24 @@ function main(): void {
       (args: any) => {
         // eslint-disable-next-line @typescript-eslint/no-floating-promises
         DevicesCommand.execute(args);
+      },
+    )
+    .command(
+      'open',
+      'Open an emulator/simulator',
+      (yargs: Argv) => {
+        return yargs.option('platform', {
+          alias: 'p',
+          type: 'string',
+          description: 'Platform (android or ios)',
+          demandOption: true,
+          choices: ['android', 'ios'],
+        });
+      },
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      (args: any) => {
+        // eslint-disable-next-line @typescript-eslint/no-floating-promises
+        OpenCommand.execute(args);
       },
     )
     .command(

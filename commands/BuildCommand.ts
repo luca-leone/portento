@@ -112,6 +112,10 @@ export class BuildCommand {
       .exportArtifact()
       .removeTemporaryFiles()
       .build();
+
+    // Run cleanup after successful build
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    cleanupRegistry.execute();
   }
 
   private static buildIOS(
@@ -143,5 +147,9 @@ export class BuildCommand {
       .exportIPA()
       .removeTemporaryFiles()
       .build();
+
+    // Run cleanup after successful build
+    // eslint-disable-next-line @typescript-eslint/no-floating-promises
+    cleanupRegistry.execute();
   }
 }
